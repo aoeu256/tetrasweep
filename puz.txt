@@ -1,0 +1,17 @@
+
+
+tut['mytut'] = 
+"""
+
+
+
+
+
+
+
+  G
+OOROOO
+OOGROO
+OORGOO
+OOOOOO
+"""

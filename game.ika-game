@@ -1,0 +1,15 @@
+(ika-game
+	(version '1.2')
+	(information
+		(title 'aoeu256 Tetris Attack + StarSweep')
+	)
+	(video
+		(xres '640')
+		(yres '640')
+	)
+	(resources
+		(maps '')
+	)
+	(meta
+	)
+)

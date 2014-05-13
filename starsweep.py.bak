@@ -1,0 +1,214 @@
+from input import *
+from os import getcwd, listdir
+import psyco; psyco.full()
+import pickle
+colors = [RGB(128,255,255), RGB(196,0,128)]
+Dimx, Dimy = 8, 24
+resox, resoy = 500, 500
+ChainTimer, ChainResetTimer, FallTimer = 200, 20, 20
+
+class Piece(object):
+    def __init__(a, area, x, y, ori=0, flip=1, c=colors[0], star=1):
+        a.x, a.y, a.ori, a.flip, a.c, a.star = x, y, ori ,flip, c, star
+        a.t, a.falltimer, a.chainresettimer = ChainTimer, ChainResetTimer, FallTimer
+        a.chain = 1
+        a.p2combo, a.obs2p, a.star2p = area.p2combo, area.obs2p, area.star2p
+        a.sx, a.sy = lambda f: a.x+a.ori*f, lambda f: a.y+(1-a.ori)*f # Star Location 
+        a.sideadj = lambda f:set([(a.x+a.ori*f*2, a.y+(1-a.ori)*f*2),  # (3) Points adjacent to star
+                          (a.sx(f)+(1-a.ori),a.sy(f)+a.ori),
+                          (a.sx(f)-(1-a.ori),a.sy(f)-a.ori)])
+        a.adj = lambda: a.star == 2 and a.sideadj(-1) | a.sideadj(1) or a.sideadj(a.flip)
+        a.obs = lambda: set([(a.sx(-1),a.sy(-1)),(a.sx(1), a.sy(1)),(a.x, a.y)])
+        a.top = lambda B: a.ori and set([(a.x, a.y+B), (a.x-1, a.y+B), (a.x+1, a.y+B)]) or set([(a.x, a.y+2*B)])
+        a.stars = lambda: a.star == 2 and [(a.sx(1), a.sy(1)), (a.sx(-1), a.sy(-1))] or [(a.sx(a.flip), a.sy(a.flip))]
+        a.ptop = lambda B: set([a.obs2p.get(i) for i in a.top(B)]) - set([None])
+        a.allptop = lambda b: flatset([i.allptop(-1)|set([i]) for i in a.ptop(b)])
+        a.adjp = lambda: set(a.star2p[a.c].get(i) for i in a.adj())-set([None])
+        a.combo = lambda: ree(a, 'adjp')
+        a.area = area
+        a.falling = False
+    def fallptop(a, f):
+        allp, b, remv = a.allptop(-1) | set([a]), set(), set()
+        for i in allp:
+            if i.ptop(1) <= allp:
+                b.add(i)
+            else:
+                remv |= i.allptop(-1)
+        for i in b-remv:
+            f(i)
+    def __repr__(a):
+        return '%d.%d;%d.%d'% (a.x, a.y, a.sx(a.flip), a.sy(a.flip))
+    def Map(a):
+        a.obs2p.update(dict([(o,a) for o in a.obs()]))
+        if not a.falling and a.t == ChainTimer:
+            a.star2p[a.c].update(dict([(o,a) for o in a.stars()]))
+    def Process(a):
+        a.falling = a.falltimer < 3 and True or False
+        if a in a.p2combo: # Chaining
+            a.t -= 1
+        elif not a.ptop(1) and a.y<Dimy-1+a.ori: # In midair
+            a.falltimer = a.falltimer < 0 and 2 or a.falltimer-1
+            if a.falltimer == 0:
+                def f(i):
+                    i.chainresettimer = ChainResetTimer
+                    i.y += 1
+                a.fallptop(f)
+                    #i.Map(falling)
+        else: # On the ground
+            a.falltimer = FallTimer
+            if a.chainresettimer > 0:
+                a.chainresettimer -= 1
+            else:
+                a.chain = 1
+         #a.Map(falling)
+    def Draw(a, x, y, fill = 1):
+        x1, y1, x2, y2 = x+(a.sx(-1)<<4), y+(a.sy(-1)<<4), x+16+(a.sx(1)<<4), y+16+(a.sy(1)<<4)
+        c = fill == 1 and RGB(0,0,0) or a.c        
+        gb = GetRGB(a.c)
+        bodyc = RGB(gb[0], gb[1], gb[2], int(a.t*255/200))
+        Video.DrawRect(x1, y1, x2, y2, bodyc, fill)
+        Video.DrawRect(x1, y1 ,x2 ,y2, RGB(255,255,255))
+        Video.DrawEllipse(x+8+(a.sx(a.flip)<<4), y+8+(a.sy(a.flip)<<4), 4, 4, c)
+        f.Print(x + a.x*16, y + a.y*16, str(a.chain))
+class PlayArea:
+    def __init__(a, x, y):        
+        a.x, a.y, = x, y
+        a.score = a.t = a.delay = 0
+        a.obs2p, a.star2p = {}, dict((c,{}) for c in colors) # Map the (x,y) of the obs or star TO its piece
+        a.p2combo = {} # # Maps a piece to its combo if it has it.  A combo is a set of pieces.
+        a.cur = Piece(area=a, x=4, y=8) # cur stands for CURrent piece not CURsor, get it right!
+        a.shadow = False        
+        a.minx, a.miny, a.maxx, a.maxy = lambda:a.cur.ori, lambda:1-a.cur.ori, lambda:Dimx-a.cur.ori, lambda:Dimy-1+a.cur.ori
+        a.prevcontrol = Input.up.Position()
+        a.prevpieces = a.replay = []
+        a.newblocks()
+    def newblocks(a):        
+        if len(a.replay) > 120:
+            filename = max(listdir(getcwd()))
+            n = int(filename.split('-')[0])
+            file = file('%05d-%d' % (n, a.score), 'w')
+            pickle.dump( (a.replay, a.pieces), file)
+        a.score = a.t = a.delay = 0
+        a.chain = dict([(i,0) for i in range(2,60)])	# The number of chains of a particular type
+        a.pieces, obs, stars, a.p2combo, a.replay = [], set(), {}, {}, []
+        for i in range(100):
+            ori = Random(0,2)
+            flip = [-1, 1][Random(0, 2)]
+            x = Random(ori, Dimx+1-ori)
+            p = Piece(area=a, x=x, y=0, ori=ori, flip=flip, c=colors[Random(0,len(colors))], star=1)
+            for y in range(Dimy-1+ori):
+                if set(p.top(1)) & obs:
+                    break
+                p.y += 1
+            if p.y > 0:               
+                if any(stars.get(i) == p.c for i in p.adj()): # Watch out for any clears
+                    #p.flip *= 1; Way too many stupid regions with this
+                    pass
+                else:
+                    a.pieces.append(p)
+                    obs |= p.obs()
+                    for i in p.stars():
+                        stars[i] = p.c
+        #if len(a.pieces) < 70:
+        #    a.newblocks()
+        a.stored = a.pieces[:]   
+    def HandleInput(a):        
+        pressed = False
+        for i in [Input.up, Input.down, Input.right, Input.left]:
+            if i.Position():
+                a.replay[a.t] = 
+                if a.prevcontrol is not i:
+                    a.prevcontrol = i
+                    a.delay = 8
+                pressed = True
+                if a.delay in (0, 8):
+                    cond = lambda s: not a.shadow or s
+                    if i == Input.up and cond(a.cur.y > a.miny()):      a.cur.y -= 1
+                    if i == Input.down and cond(a.cur.y < a.maxy()):    a.cur.y += 1
+                    if i == Input.right and cond(a.cur.x < a.maxx()):   a.cur.x += 1
+                    if i == Input.left and cond(a.cur.x > a.minx()):    a.cur.x -= 1
+                break
+        if a.delay > 0:
+            a.delay -= 1
+        if not pressed:
+            a.delay = 8
+        if Input.keyboard['D'].Position():  a.cur.ori, a.cur.flip = 1, 1
+        elif Input.keyboard['S'].Pressed(): a.cur.ori, a.cur.flip = 0, 1
+        elif Input.keyboard['A'].Pressed(): a.cur.ori, a.cur.flip = 1, -1
+        elif Input.keyboard['W'].Pressed(): a.cur.ori, a.cur.flip = 0, -1
+        elif Input.keyboard['E'].Pressed():
+            a.newblocks()
+        elif Input.keyboard['F'].Pressed() or Input.mouse.left.Pressed():
+                if a.shadow and all(i not in a.obs2p for i in a.cur.obs()): # Make sure cursor isn't over any piece
+                    a.pieces += [Piece(a, a.cur.x, a.cur.y, a.cur.ori, a.cur.flip, a.cur.c, a.cur.star)]
+                    a.shadow = False
+                elif not a.shadow:
+                    try:
+                        a.cur = a.obs2p[a.cur.x, a.cur.y]
+                        a.cur.t = 0
+                        a.shadow = True
+                    except KeyError: pass
+        elif Input.keyboard['F2'].Pressed(): a.stored = a.pieces[:]
+        elif Input.keyboard['F4'].Pressed(): a.pieces = a.stored[:]
+        a.cur.x, a.cur.y = clamp(a.cur.x,0,Dimx), clamp(a.cur.y,0,Dimy)
+    def Draw(a): # Called every frame        
+        a.t += 1
+        a.obs2p.clear()
+        for c in a.star2p.values():
+            c.clear()
+        a.pieces = [i for i in a.pieces if i.t]
+        for i in a.pieces:
+            i.Map()
+        for i in a.pieces:
+            i.Process() # let pieces drop
+            i.Draw(a.x, a.y)
+        for x in range(Dimx+1):
+            for y in range (Dimy+1):
+                for c in a.star2p.values():
+                    s = set([c.get((x,y)), c.get((x-1,y)), c.get((x,y-1))]) - set([None])
+                    if c.get((x,y)) and len(s) > 1:
+                        for i in s:
+                            try:
+                                a.p2combo[i] |= s
+                            except KeyError:
+                                a.p2combo[i] = s
+            #comb = [i for i in i.combo() if i.t > 195]
+            #if len(comb) > 1:
+              #  a.p2combo.update(dict([(i,comb) for i in i.combo()]))
+        for p, v in a.p2combo.items():
+            if p.t == 2:
+                comboptop = set([])
+                for i in v:
+                    i.t = 0
+                    comboptop |= i.allptop(-1)
+                m = max([i.chain for i in v])
+                a.score += 1 + (len(v) ** (m-2)) + (2 ** len(a.p2combo[p])) - 4               
+                if m > 1:
+                    a.chain[m] += 1
+                for i in comboptop:
+                    i.chain += m
+        a.HandleInput()
+
+        a.prevpieces = []
+        for c in a.star2p.values():
+            for k in c:
+                x, y = a.x + k[0]*16, a.y + k[1] * 16
+                Video.DrawLine(x, y, x+16, y+16, RGB(255,255,255))
+        if a.shadow:
+            a.cur.x, a.cur.y = clamp(a.cur.x,a.minx(),a.maxx()), clamp(a.cur.y, a.minx(), a.maxy())
+            a.cur.Draw(a.x, a.y, 0)
+        else:
+            x1, y1 = a.x+a.cur.x*16, a.y+a.cur.y*16
+            Video.DrawLine(x1, y1, x1+16, y1+16, RGB(255,255,255))                
+        Video.DrawRect(a.x, a.y, 16 + a.x + Dimx*16, 16+ a.y + Dimy*16, RGB(255, 255, 255))# Outline
+        f.Print(5, 20, 'Pieces: %d' % len(a.pieces))
+        f.Print(a.x-50, a.y, 'SCORE:')
+        f.Print(a.x-50, a.y+16, '%d' % a.score)
+        f.Print(a.x-50, a.y+32, '%d,%d' % (a.cur.x, a.cur.y))
+        #mx, my = Input.mouse.x.Position(), Input.mouse.y.Position()
+        #Video.DrawLine(mx-3,my,mx+3,my,RGB(255,0,0))
+        #Video.DrawLine(mx,my-3,mx,my+3,RGB(255,0,0))
+        #a.cur.x, a.cur.y = int(mx/16), int(my/16)
+        for k, v in a.chain.iteritems():
+            if v > 0:
+                f.Print(a.x-50, a.y + 32 + k * 8, "%dx: %d " % (k,v))

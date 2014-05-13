@@ -1,0 +1,27 @@
+ika 0.63 startup
+Built on Jan  3 2010
+--------------------------
+Initializing SDL
+Initializing Video
+Starting OpenGL video driver
+--Setting video mode
+--Initializing OpenGL
+--Disabling cursor
+Initializing Input
+Initializing sound
+Initing Python
+Executing system.py
+.\editor.py:456: SyntaxWarning: name 'key2control' is used prior to global declaration
+  global key2control
+ lol
+started profiler
+main
+log:  
+log: Loading Ta.py from Mon Mar 21 17:33:41 2011
+log: Press F and D to swap (press both to double swap).
+log: Press W to raise the stack.
+log: Press V to empty the log.
+log: Press J and K (Shift+J Shift+K) to change the color of the panel
+log: Press F2 to save state, and F4 to load state.
+log: ======
+---- shutdown ----

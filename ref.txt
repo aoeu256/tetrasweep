@@ -1,0 +1,693 @@
+Constants
+---------
+
+Opaque (int)
+AlphaBlend (int)
+Matte (int)
+
+Functions
+---------
+
+UnhookTimer([function])
+
+Removes the function from the timer queue if it is present.  If not, the call does
+nothing.  If the argument is omitted, then the list is cleared in its entirety.
+
+---
+
+Log(message)
+
+Writes a string to ika.log, if logging is enabled.
+
+---
+
+ShowPage()
+
+Flips the back and front video buffers.  This must be called after the screen
+has been completely drawn, or the scene will never be presented to the player.
+This method is not guaranteed to preserve the contents of the screen, so it is
+advised to dedraw the entire screen, instead of incrementally drawing.
+
+---
+
+Delay(time)
+
+Freezes the engine for a number of 'ticks'. (one tick is 1/100th of a second)
+
+---
+
+GetPlayer(entity) -> Entity
+
+Returns the current player entity, or None if there isn't one.
+
+---
+
+Exit([message])
+
+Exits ika immediately, displaying the message onscreen, if specified.
+
+---
+
+GetCameraTarget() -> Entity
+
+Returns the entity that the camera is following, or None if it is free.
+
+---
+
+SetCameraTarget(entity)
+
+Sets the camera target to the entity specified.  If None is passed instead,
+the camera remains stationary, and can be altered with the Map.xwin and map.ywin
+properties.
+
+---
+
+SetPlayer(entity)
+
+Sets the player entity to the entity passed.  The player entity is the entity
+that moves according to user input.  Passing None instead unsets any player entity
+that may have been previously set.
+
+---
+
+GetFrameRate() -> int
+
+Returns the current engine framerate, in frames per second.
+
+---
+
+HookRetrace(function)
+
+Adds the function to the retrace queue. (it will be called whenever the map is drawn,
+whether by Map.Render or by other means)
+
+---
+
+GetTime() -> int
+
+Returns the number of ticks since the engine was started.
+
+---
+
+ProcessEntities()
+
+Performs 1/100th of a second of entity AI.  Calling this 100 times a second
+will cause entities to move around as if the engine was in control.
+
+---
+
+Random(min, max) -> int
+
+Returns a random integer less than or equal to min, and less than max.
+ie.  min <= value < max
+
+---
+
+RGB(r, g, b[, a]) -> int
+
+Creates a 32bpp colour value from the four colour levels passed.  If alpha is
+omitted, it is assumed to be 255. (opaque)
+
+---
+
+GetCaption() -> string
+
+Returns the caption on the ika window title bar.
+
+---
+
+GetRGB(colour) -> tuple(int, int, int, int)
+
+Returns a 4-tuple containing the red, blue, green, and alpha values of the colour
+passed, respectively.
+
+---
+
+EntityAt(x, y, width, height) -> Entity
+
+If there is an entity within the rectangle passed, it is returned.
+If not, then None is returned.
+
+---
+
+Wait(time)
+
+Runs the engine for a number of ticks, disallowing player input.
+Unlike Delay, Wait causes entities to be processed, the tileset to be animated, and the map drawn.
+
+---
+
+SetCaption(newcaption)
+
+Sets the caption on the ika window title bar.
+
+---
+
+HookTimer(function)
+
+Adds the function to the timer queue. (the function will be called 100 times per second.
+This feature should be used sparingly, as it will cause serious problems if the queue
+cannot be executed in less than 1/100th of a second.
+
+---
+
+UnhookRetrace([function])
+
+Removes the function from the retrace queue if it is present.  If not, the call does
+nothing.  If the argument is omitted, then the list is cleared in its entirety.
+
+---
+
+
+Objects
+-------
+
+Input
+-----
+Interface for hardware input devices. (such as the keyboard and mouse)
+
+Input.down
+Gets the standard "Down" control.
+
+---
+Input.right
+Gets the standard "Right" control.
+
+---
+Input.up
+Gets the standard "Up" control.
+
+---
+Input.cancel
+Gets the standard "Cancel" control.
+
+---
+Input.enter
+Gets the standard "Enter" control.
+
+---
+Input.Update()
+
+Updates the state of the mouse, and any attached input devices.
+Also gives the OS a chance to do background tasks.  Continious
+loops should call this occasionally to give the OS time to perform
+its tasks.
+
+---
+Input.left
+Gets the standard "Left" control.
+
+---
+----------------------------------------
+
+Map
+---
+Represents the current map
+
+Map.SetParallax(layer, xmul, xdiv, ymul, ydiv)
+
+Sets the specified layer's parallax settings according to the multipliers
+and divisors given.
+
+---
+Map.defaultmusic
+Gets or sets the default music of the current map
+
+---
+Map.tilewidth
+Gets the width of the current tileset
+
+---
+Map.height
+Gets the height of the current map, in tiles
+
+---
+Map.vspname
+Gets or sets the name of the current tileset
+
+---
+Map.Switch(filename)
+
+Switches the current map to the map file specified.
+The new map's AutoExec event is executed, if it exists.
+
+---
+Map.GetObs(x, y) -> int
+
+Returns 1 if the tile at (x,y) is obstructed, or 0 if not.
+
+---
+Map.GetParallax(layer) -> (int, int, int, int)
+
+Returns a 4-tuple containing parallax settings for the layer specified.
+Its contents are as follows:
+( parallax X multiplier,
+  parallax X divisor,
+  parallax Y multiplier,
+  parallax Y divisor )
+
+---
+Map.ywin
+Gets or sets the Y coordinate of the camera
+
+---
+Map.SetZone(x, y, zone)
+
+Sets the zone id number at (x,y).
+
+---
+Map.Render([rstring])
+
+Draws the map and entities, according to rstring.  If rstring is
+omitted, the map's default render string is used instead. (this
+can be set from the map editor)
+
+The render string format is as follows:
+1-9 - Render a tile layer.  The bottom layer is layer number 1.
+E - Render the entities.
+R - Execute the functions in the HookRetrace queue.
+
+---
+Map.tileheight
+Gets the height of the current tileset
+
+---
+Map.rstring
+Gets or sets the current render string of the map
+
+---
+Map.GetTile(x, y, layer) -> int
+
+Returns the index of the tile at (x,y) on the layer specified.
+
+---
+Map.entities
+Gets a dictionary of entities currently tied to the map
+
+---
+Map.xwin
+Gets or sets the X coordinate of the camera
+
+---
+Map.SetObs(x, y, obs)
+
+If obs is nonzero, the tile at (x,y) is obstructed, else it is
+unobstructed.
+
+---
+Map.GetZone(x, y) -> int
+
+Returns the id number of the zone at (x,y)
+
+---
+Map.SetTile(x, y, layer, tile)
+
+Sets the tile at (x,y) of the layer specified.
+
+---
+Map.width
+Gets the width of the current map, in tiles
+
+---
+Map.numtiles
+Gets the number of tiles in the current tileset
+
+---
+----------------------------------------
+
+Video
+-----
+Interface for ika's graphics engine.
+
+Video.DrawTriangle((x, y, colour), (x, y, colour), (x, y, colour))
+
+Draws a triangle onscreen.  Each point is drawn in the colour specified.
+
+---
+Video.DrawPixel(x, y, colour)
+
+Draws a dot at (x,y) with the colour specified.
+
+---
+Video.DrawLine(x1, y1, x2, y2, colour)
+
+Draws a straight line from (x1, y1) to (x2, y2) in the colour specified.
+
+---
+Video.ScaleBlit(image, x, y, width, height[, transparent])
+
+Draws the image at (x,y), stretching it out to the size given.
+If transparent is sepcified and zero, alpha blending is disabled,
+else it is enabled.
+
+---
+Video.DistortBlit(image, (upleftX, upleftY), (uprightX, uprightY), (downrightX, downrightY), (downleftX, downleftY)[,transparent])
+
+Draws the image onscreen, stretched to the four points specified.
+If transparent is sepcified and zero, alpha blending is disabled,
+else it is enabled.
+
+---
+Video.DrawEllipse(cx, cy, rx, ry, colour[, filled])
+
+Draws an ellipse, centred at (cx, cy), of radius rx and ry on the X and
+Y axis, respectively.  If filled is omitted or nonzero, the ellipse is filled in
+else it is drawn as an outline.
+
+---
+Video.Blit(image, x, y[, transparent])
+
+Draws the image at (x,y) at its original size.
+If transparent is sepcified and zero, alpha blending is disabled,
+else it is enabled.
+
+---
+Video.xres
+Gets the horizontal resolution of the current display mode, in pixels.
+
+---
+Video.DrawRect(x1, y1, x2, y2, colour[, fill])
+
+Draws a rectangle with (x1, y1) and (x2, y2) as opposite corners.
+If fill is omitted or zero, an outline is drawn, else it is filled in.
+
+---
+Video.yres
+Gets the vertical resolution of the current display mode, in pixels.
+
+---
+Video.TileBlit(image, x, y, width, height[, scalex[, scaley[, transparent]]])
+
+Draws the image onscreen, "tiling" it as necessary to fit the rectangle specified.
+scalex and scaley are floating point values used as a scale factor.  The default is 1.
+If transparent is specified and zero, then alpha blending is disabled, else it is enabled.
+
+---
+----------------------------------------
+
+Sound
+-----
+A hunk of sound data, like a sound effect, or a piece of music.
+
+Sound.volume
+The volume of the sound.  Ranges from 0 to 1, with 1 being full volume.
+
+---
+Sound.Play()
+
+Plays the stream.
+
+---
+Sound.Pause()
+
+Pauses the stream.  Calling Sound.Play() will cause playback to resume
+where it left off.
+
+---
+Sound.loop
+If nonzero, the sound loops.  If zero, then the sound stops playing when it reaches the end.
+
+---
+Sound.position
+The chronological position of the sound, in milliseconds.
+
+---
+Sound.pan
+Panning.  0 is left.  2 is right.  1 is centre.
+
+---
+----------------------------------------
+
+Canvas
+------
+A software representation of an image that can be manipulated easily.
+
+Canvas.Rotate()
+
+Rotates the contents of the canvas 90 degrees, clockwise.
+
+---
+Canvas.ScaleBlit(destcanvas, x, y, width, height, blendmode)
+
+Draws the image on destcanvas, at position (x,y), scaled to (width, height) pixels in size.
+blendmode is either ika.Opaque, ika.Matte, or ika.AlphaBlend.
+
+---
+Canvas.Flip()
+
+Flips the contents of the canvas on the X axis.
+(turns it upside down)
+
+---
+Canvas.height
+Gets the height of the canvas
+
+---
+Canvas.SetPixel(x, y, colour)
+
+Sets the pixel at (x,y) on the canvas to the colour specified.  This function
+totally disregards alpha.  It *sets* the pixel, in the truest sense of the word.
+
+---
+Canvas.width
+Gets the width of the canvas
+
+---
+Canvas.Blit(destcanvas, x, y, blendmode)
+
+Draws the image on destcanvas, at position (x,y)
+blendmode is either ika.Opaque, ika.Matte, or ika.AlphaBlend.
+
+---
+Canvas.Mirror()
+
+Mirrors the contents of the canvas along the Y axis.
+(left to right)
+
+---
+Canvas.Save(fname)
+
+Writes the image to the filename specified in PNG format.
+
+ie.  canvas.Save('myimage.png')
+
+---
+Canvas.GetPixel(x, y)
+
+Returns the pixel at position (x,y) on the canvas, as a packed 32bpp RGBA colour.
+
+---
+Canvas.Clear([colour])
+
+Sets every pixel on the canvas to the colour given.  If colour is omitted,
+flat black is used.
+
+---
+Canvas.Resize(width, height)
+
+Resizes the canvas to the size specified.  No scaling takes place; if the dimensions
+given are smaller than the existing image, it is cropped.  Blank, transparent space is
+added when the canvas is enlarged.
+
+---
+----------------------------------------
+
+Font
+----
+An ika font.
+TODO: say something interesting in here. :P
+
+Font.width
+Gets the width of the widest glyph in the font.
+
+---
+font.CenterPrint(x, y, text)
+
+Prints a string of text on screen,
+with x as the center point rather than the leftmost point.
+
+---
+font.Print(x, y, text)
+
+Prints a string of text on screen at (x,y).
+
+---
+Font.tabsize
+Gets or sets the tab size of the font.
+
+---
+font.StringWidth(text) -> int
+
+Returns how many pixels in width the passed string would be,
+if printed in this font.
+
+---
+font.RightPrint(x, y, text)
+
+Prints a string of text on screen,
+with x as the center point rather than the rightmost point.
+
+---
+Font.height
+Gets the height of the font.
+
+---
+----------------------------------------
+
+Image
+-----
+A hardware-dependant image.
+
+Image.height
+Gets the height of the image.
+
+---
+Image.width
+Gets the width of the image.
+
+---
+Image.Clip(x, y, x2, y2)
+
+Sets the dimensions of the image's clipping rectangle.
+When images are drawn they will only be drawn in this area.
+
+---
+Image.ScaleBlit(x, y, width, height[, transparent])
+
+Blits the image, but stretches it out to the dimensions
+specified in (width,height).
+
+---
+Image.DistortBlit((x1, y1), (x2, y2), (x3, y3), (x4, y4)[, transparency])
+
+Blits the image scaled to the four points specified.
+
+---
+Image.Blit(x, y[, transparent])
+
+Draws the image at (x,y).
+If transparent is specified and 0 the image is opaque.
+Otherwise, alpha blending is enabled.
+
+---
+----------------------------------------
+
+Entity
+------
+Represents an entity in the ika game engine.
+
+Entity.entobs
+If nonzero, the entity is unable to walk through entities whose isobs property is set.
+
+---
+Entity.direction
+Gets or sets the entity's direction
+
+---
+Entity.WanderZone(pixels, delay, zone)
+
+Directs the entity to wander around randomly.  Unlike Entity.Wander, however
+the entity will not wander off the specified zone.  This is a good way to confine
+an entity to an irregular region of the map.
+
+---
+Entity.sprite
+Gets or sets the sprite used to display the entity.
+
+---
+Entity.curframe
+Gets the entity's currently displayed frame
+
+---
+Entity.visible
+If nonzero, the entity is drawn when onscreen
+
+---
+Entity.IsMoving() -> int
+
+If the entity is moving, the result is 1.  If not, it is 0.
+
+---
+Entity.adjacentactivate
+If nonzero, the entity will activate when it touches the player entity. (not implemented)
+
+---
+Entity.actscript
+Gets or sets the name of the function called when the entity is activated.
+
+---
+Entity.speed
+Gets or sets the entity's speed, in pixels/second
+
+---
+Entity.hotheight
+Gets the height of the entity's hotspot.
+
+---
+Entity.name
+Gets or sets the entity's name.  This is more or less for your own convenience only.
+
+---
+Entity.isobs
+If nonzero, the entity will obstruct other entities.
+
+---
+Entity.DetectCollision() -> Entity
+
+If an entity is touching the entity, then it is returned.
+None is returned if there is no entity touching it.
+
+---
+Entity.Move(movepattern)
+
+Directs the entity to move in the pattern specified.
+
+---
+Entity.Stop()
+
+Directs the entity to stop whatever it is doing.
+
+---
+Entity.hoty
+Gets the Y position of the entity's hotspot.
+
+---
+Entity.hotx
+Gets the X position of the entity's hotspot.
+
+---
+Entity.specframe
+If nonzeno, this frame is displayed instead of the normal animation
+
+---
+Entity.y
+Gets or sets the entity's Y position. (in pixels)
+
+---
+Entity.x
+Gets or sets the entity's X position. (in pixels)
+
+---
+Entity.hotwidth
+Gets the width of the entity's hotspot.
+
+---
+Entity.Wander(pixels, delay)
+
+Directs the entity to wander around randomly.  It will move the specified
+number of pixels in one direction, then delay for the specified amount of
+time.
+
+---
+Entity.mapobs
+If nonzero, the entity is unable to walk on obstructed areas of the map.
+
+---
+Entity.Chase(entity, distance)
+
+Directs the entity to chase the entity specified.  It will attempt to close
+within the specified distance (in pixels) before it stops.
+
+---
+----------------------------------------
+
